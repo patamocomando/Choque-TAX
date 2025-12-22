@@ -7,13 +7,13 @@ import {
   History, 
   AlertTriangle, 
   LogOut, 
-  Clock,
-  MapPin,
-  Car,
-  ChevronRight,
-  Loader2,
-  TrendingUp,
-  WifiOff
+  Clock, 
+  MapPin, 
+  Car, 
+  ChevronRight, 
+  Loader2, 
+  TrendingUp, 
+  WifiOff 
 } from 'lucide-react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
@@ -22,7 +22,7 @@ import {
   addDoc, 
   onSnapshot, 
   updateDoc, 
-  doc,
+  doc, 
   query 
 } from 'firebase/firestore';
 import { 
@@ -44,7 +44,7 @@ const firebaseConfig = {
   measurementId: "G-FYR5CK21KG"
 };
 
-// Inicialização segura com tratamento de erro global
+// Safe initialization with global error handling
 let app, auth, db;
 try {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -72,9 +72,8 @@ const App = () => {
     tipo: '', placa: '', modelo: '', cor: '', ano: '', local: '', data: '', obs: ''
   });
 
-  // Autenticação com redundância de segurança
+  // Authentication logic
   useEffect(() => {
-    // Timeout de 7 segundos: Se não carregar, libera a tela de qualquer forma
     const safetyTimer = setTimeout(() => {
       if (loading) {
         setLoading(false);
@@ -114,7 +113,7 @@ const App = () => {
     };
   }, []);
 
-  // Sincronização de dados (Firestore)
+  // Real-time synchronization
   useEffect(() => {
     if (!user || !db) return;
     
