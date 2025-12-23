@@ -4,26 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>CHOQUE - PMPB</title>
-    <!-- Tailwind via CDN para visualização garantida -->
+    <!-- Tailwind via CDN - Carregamento prioritário -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body { 
         margin: 0; 
         background-color: black; 
         color: white;
+        font-family: sans-serif;
       }
       #root { 
-        min-height: 100vh; 
+        min-height: 100vh;
+        background-color: black;
       }
     </style>
   </head>
-  <body class="bg-black text-white antialiased">
+  <body>
     <div id="root"></div>
     
     <!-- 
-      CORREÇÃO CRÍTICA: 
-      O script deve apontar exatamente para o nome do arquivo no GitHub.
-      Usaremos 'main.jsx' como padrão tático para evitar confusões de nomes.
+      O script agora aponta para main.jsx. 
+      Certifique-se de que o arquivo no seu GitHub tem EXATAMENTE este nome.
     -->
     <script type="module" src="./main.jsx"></script>
   </body>
