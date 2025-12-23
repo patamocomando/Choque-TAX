@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
@@ -7,13 +7,23 @@
     <!-- Tailwind via CDN para visualização garantida -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      body { margin: 0; background-color: black; }
-      #root { min-height: 100vh; }
+      body { 
+        margin: 0; 
+        background-color: black; 
+        color: white;
+      }
+      #root { 
+        min-height: 100vh; 
+      }
     </style>
   </head>
   <body class="bg-black text-white antialiased">
     <div id="root"></div>
-    <!-- O ponto antes da barra './' é vital para a Vercel encontrar o código -->
+    
+    <!-- 
+      CORREÇÃO CRÍTICA: 
+      Removido o script /assets/ e apontado diretamente para o seu código fonte.
+    -->
     <script type="module" src="./main.jsx"></script>
   </body>
 </html>

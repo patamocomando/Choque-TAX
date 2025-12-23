@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom/client';
 import { 
   Shield, 
   PlusCircle, 
@@ -51,7 +52,7 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
 } catch (e) {
-  console.error("Falha na ligação tática:", e);
+  console.error("Erro ao conectar com a Base de Dados:", e);
 }
 
 const appId = 'choque-pmpb-oficial';
@@ -71,13 +72,12 @@ const App = () => {
     tipo: '', placa: '', modelo: '', cor: '', ano: '', local: '', data: '', obs: ''
   });
 
-  // Autenticação Silenciosa
   useEffect(() => {
     const initAuth = async () => {
       try {
         await signInAnonymously(auth);
       } catch (err) {
-        console.error("Erro de Auth.");
+        console.error("Falha no login anônimo.");
       }
     };
     initAuth();
@@ -88,7 +88,6 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // Sincronização em Tempo Real
   useEffect(() => {
     if (!user) return;
     const vRef = collection(db, 'artifacts', appId, 'public', 'data', 'veiculos');
@@ -127,9 +126,9 @@ const App = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (loginForm.matricula.trim() === 'choque' && loginForm.senha === 'choque123') {
+    if (loginForm.matricula.trim() === 'admin' && loginForm.senha === 'choque123') {
       setAuthenticated(true);
-      showNotification("Operacional autorizado.");
+      showNotification("Acesso autorizado.");
     } else {
       showNotification("Credenciais inválidas.", "error");
     }
@@ -142,7 +141,7 @@ const App = () => {
     const jaExiste = vehicles.find(v => v.placa === placaNova && v.status === 'ROUBADO');
 
     if (jaExiste) {
-      showNotification(`ERRO: Placa ${placaNova} já está activa!`, "error");
+      showNotification(`ERRO: Placa ${placaNova} já ativa!`, "error");
       return;
     }
 
@@ -163,7 +162,7 @@ const App = () => {
       setFormData({ tipo: '', placa: '', modelo: '', cor: '', ano: '', local: '', data: '', obs: '' });
       showNotification("Alerta lançado na rede!");
     } catch (err) {
-      showNotification("Erro ao guardar.", "error");
+      showNotification("Erro ao salvar.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -179,14 +178,14 @@ const App = () => {
       });
       showNotification(`VTR ${placa} recuperada.`);
     } catch (err) {
-      showNotification("Erro na actualização.", "error");
+      showNotification("Erro na atualização.", "error");
     }
   };
 
   if (loading) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-red-600">
+    <div className="h-screen bg-black flex flex-col items-center justify-center text-red-600 font-sans">
       <Loader2 className="animate-spin mb-4" size={48} />
-      <span className="text-[10px] font-black uppercase tracking-widest text-center">Sincronizando Base Tática...</span>
+      <span className="text-[10px] font-black uppercase tracking-widest">Sincronizando Sistema...</span>
     </div>
   );
 
@@ -211,7 +210,7 @@ const App = () => {
           <Shield size={20} className="text-red-600" />
           <span className="font-black text-sm uppercase italic">Operacional Choque</span>
         </div>
-        <button onClick={() => setAuthenticated(false)} className="text-zinc-600 hover:text-red-600 transition-colors"><LogOut size={20} /></button>
+        <button onClick={() => setAuthenticated(false)} className="text-zinc-600"><LogOut size={20} /></button>
       </header>
 
       <main className="flex-1 overflow-y-auto pb-32 p-4">
@@ -230,7 +229,7 @@ const App = () => {
 
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-              <input type="text" placeholder="Pesquisar placa ou modelo..." className="w-full bg-zinc-900 border border-zinc-800 p-4 pl-12 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              <input type="text" placeholder="Filtrar placa..." className="w-full bg-zinc-900 border border-zinc-800 p-4 pl-12 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="space-y-4">
@@ -244,7 +243,7 @@ const App = () => {
                   <div key={v.id} className={`bg-zinc-900 border rounded-3xl p-5 transition-all ${v.status === 'ROUBADO' ? 'border-red-900/30 ring-1 ring-red-600/5 shadow-lg' : 'opacity-40 grayscale border-zinc-800'}`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${v.status === 'ROUBADO' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>{v.status}</span>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${v.status === 'ROUBADO' ? 'bg-red-600 text-white' : 'bg-zinc-800'}`}>{v.status}</span>
                         <h4 className="text-2xl font-black mt-2 leading-none uppercase">{v.placa || "S/ P"}</h4>
                         <p className="text-zinc-400 text-sm mt-1">{v.modelo}</p>
                       </div>
@@ -289,12 +288,16 @@ const App = () => {
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-900 px-10 py-5 flex justify-around items-center rounded-t-[40px] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         <button onClick={() => setView('list')} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'list' ? 'text-red-600 scale-110' : 'text-zinc-700'}`}><Search size={22} /><span className="text-[8px] font-black uppercase">Monitor</span></button>
         <button onClick={() => setView('add')} className={`-mt-14 w-16 h-16 rounded-full flex items-center justify-center border-4 border-black transition-all active:scale-90 ${view === 'add' ? 'bg-white text-black' : 'bg-red-600 text-white shadow-red-600/40'}`}><PlusCircle size={32} /></button>
-        <button className="flex flex-col items-center gap-1.5 text-zinc-900 opacity-20 cursor-not-allowed" disabled><History size={22} /><span className="text-[8px] font-black uppercase tracking-widest">Histórico</span></button>
+        <button className="flex flex-col items-center gap-1.5 text-zinc-900 opacity-20 cursor-not-allowed" disabled><History size={22} /><span className="text-[8px] font-black uppercase">Histórico</span></button>
       </nav>
       
       {notification && <div className={`fixed top-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-[10px] font-black uppercase border z-[60] shadow-2xl animate-in fade-in slide-in-from-top-4 ${notification.type === 'error' ? 'bg-red-950 border-red-600 text-white' : 'bg-zinc-900 border-zinc-800 text-green-500'}`}>{notification.msg}</div>}
     </div>
   );
 };
+
+// Montagem Crítica para Vercel
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<React.StrictMode><App /></React.StrictMode>);
 
 export default App;
