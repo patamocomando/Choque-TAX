@@ -44,14 +44,14 @@ const firebaseConfig = {
   measurementId: "G-FYR5CK21KG"
 };
 
-// Safe initialization with global error handling
+// Inicialização segura
 let app, auth, db;
 try {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
 } catch (e) {
-  console.error("Falha crítica na inicialização dos serviços Firebase:", e);
+  console.error("Falha na ligação tática:", e);
 }
 
 const appId = 'choque-pmpb-oficial';
@@ -66,75 +66,38 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loginForm, setLoginForm] = useState({ matricula: '', senha: '' });
   const [notification, setNotification] = useState(null);
-  const [connectionError, setConnectionError] = useState(false);
 
   const [formData, setFormData] = useState({
     tipo: '', placa: '', modelo: '', cor: '', ano: '', local: '', data: '', obs: ''
   });
 
-  // Authentication logic
+  // Autenticação Silenciosa
   useEffect(() => {
-    const safetyTimer = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        setConnectionError(true);
-      }
-    }, 7000);
-
     const initAuth = async () => {
-      if (!auth) {
-        setLoading(false);
-        return;
-      }
       try {
         await signInAnonymously(auth);
       } catch (err) {
-        console.error("Erro na autenticação anônima:", err);
-        setLoading(false);
-        setConnectionError(true);
+        console.error("Erro de Auth.");
       }
     };
-    
     initAuth();
-
-    let unsubscribe = () => {};
-    if (auth) {
-      unsubscribe = onAuthStateChanged(auth, (u) => {
-        setUser(u);
-        setLoading(false);
-        setConnectionError(false);
-        clearTimeout(safetyTimer);
-      });
-    }
-
-    return () => {
-      unsubscribe();
-      clearTimeout(safetyTimer);
-    };
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Real-time synchronization
+  // Sincronização em Tempo Real
   useEffect(() => {
-    if (!user || !db) return;
-    
-    try {
-      const vRef = collection(db, 'artifacts', appId, 'public', 'data', 'veiculos');
-      const q = query(vRef);
-      
-      const unsubscribe = onSnapshot(q, 
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setVehicles(data);
-        }, 
-        (error) => {
-          console.error("Erro no stream de dados (Firestore):", error);
-        }
-      );
-      
-      return () => unsubscribe();
-    } catch (e) {
-      console.error("Erro ao configurar rádio (Firestore):", e);
-    }
+    if (!user) return;
+    const vRef = collection(db, 'artifacts', appId, 'public', 'data', 'veiculos');
+    const q = query(vRef);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setVehicles(data);
+    }, (error) => console.error("Erro de sincronização."));
+    return () => unsubscribe();
   }, [user]);
 
   const stats = useMemo(() => {
@@ -164,25 +127,22 @@ const App = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (loginForm.matricula.trim() === 'admin' && loginForm.senha === 'choque123') {
+    if (loginForm.matricula.trim() === 'choque' && loginForm.senha === 'choque123') {
       setAuthenticated(true);
-      showNotification("Acesso autorizado.");
+      showNotification("Operacional autorizado.");
     } else {
-      showNotification("Dados incorretos.", "error");
+      showNotification("Credenciais inválidas.", "error");
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!user || !db) {
-      showNotification("Sem conexão com o rádio central.", "error");
-      return;
-    }
+    if (!user) return;
     const placaNova = formData.placa.toUpperCase().trim();
     const jaExiste = vehicles.find(v => v.placa === placaNova && v.status === 'ROUBADO');
 
     if (jaExiste) {
-      showNotification(`ERRO: Placa ${placaNova} já está ativa!`, "error");
+      showNotification(`ERRO: Placa ${placaNova} já está activa!`, "error");
       return;
     }
 
@@ -203,14 +163,14 @@ const App = () => {
       setFormData({ tipo: '', placa: '', modelo: '', cor: '', ano: '', local: '', data: '', obs: '' });
       showNotification("Alerta lançado na rede!");
     } catch (err) {
-      showNotification("Erro ao salvar no banco de dados.", "error");
+      showNotification("Erro ao guardar.", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
   const markAsRecovered = async (id, placa) => {
-    if (!user || !db) return;
+    if (!user) return;
     try {
       const vRef = doc(db, 'artifacts', appId, 'public', 'data', 'veiculos', id);
       await updateDoc(vRef, { 
@@ -219,14 +179,14 @@ const App = () => {
       });
       showNotification(`VTR ${placa} recuperada.`);
     } catch (err) {
-      showNotification("Erro na atualização.", "error");
+      showNotification("Erro na actualização.", "error");
     }
   };
 
   if (loading) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-red-600 font-sans p-6 text-center">
+    <div className="h-screen bg-black flex flex-col items-center justify-center text-red-600">
       <Loader2 className="animate-spin mb-4" size={48} />
-      <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Estabelecendo Conexão...</span>
+      <span className="text-[10px] font-black uppercase tracking-widest text-center">Sincronizando Base Tática...</span>
     </div>
   );
 
@@ -234,34 +194,12 @@ const App = () => {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white text-center font-sans">
         <Shield size={64} className="text-red-600 mb-4 shadow-2xl shadow-red-600/20" />
-        <h1 className="text-4xl font-black italic uppercase tracking-tighter">Choque <span className="text-red-600">PMPB</span></h1>
-        
-        {connectionError && (
-          <div className="mt-4 flex items-center gap-2 text-zinc-500 bg-zinc-900/50 px-4 py-2 rounded-full text-[10px] font-bold uppercase border border-zinc-800">
-            <WifiOff size={14} /> Modo Offline Ativo
-          </div>
-        )}
-
+        <h1 className="text-4xl font-black italic uppercase">Choque <span className="text-red-600">PMPB</span></h1>
         <form onSubmit={handleLogin} className="w-full max-w-sm mt-8 space-y-4 text-left">
-          <input 
-            type="text" 
-            placeholder="Matrícula" 
-            className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-white outline-none focus:border-red-600 px-4 py-3" 
-            onChange={(e) => setLoginForm({...loginForm, matricula: e.target.value})} 
-            required 
-          />
-          <input 
-            type="password" 
-            placeholder="Senha Tática" 
-            className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-white outline-none focus:border-red-600 px-4 py-3" 
-            onChange={(e) => setLoginForm({...loginForm, senha: e.target.value})} 
-            required 
-          />
-          <button type="submit" className="w-full bg-red-600 text-white font-black py-4 rounded-2xl transition-all active:scale-95 uppercase shadow-lg shadow-red-600/20">
-            Entrar no Sistema
-          </button>
+          <input type="text" placeholder="Matrícula" className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-white outline-none focus:border-red-600 px-4 py-3" onChange={(e) => setLoginForm({...loginForm, matricula: e.target.value})} required />
+          <input type="password" placeholder="Senha Tática" className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-white outline-none focus:border-red-600 px-4 py-3" onChange={(e) => setLoginForm({...loginForm, senha: e.target.value})} required />
+          <button type="submit" className="w-full bg-red-600 text-white font-black py-4 rounded-2xl transition-all active:scale-95 uppercase tracking-widest">Entrar</button>
         </form>
-        <p className="mt-8 text-zinc-700 text-[9px] font-black uppercase tracking-[0.2em]">Batalhão de Polícia de Choque - Paraíba</p>
       </div>
     );
   }
@@ -273,9 +211,7 @@ const App = () => {
           <Shield size={20} className="text-red-600" />
           <span className="font-black text-sm uppercase italic">Operacional Choque</span>
         </div>
-        <button onClick={() => setAuthenticated(false)} className="text-zinc-600 hover:text-red-600 transition-colors">
-          <LogOut size={20} />
-        </button>
+        <button onClick={() => setAuthenticated(false)} className="text-zinc-600 hover:text-red-600 transition-colors"><LogOut size={20} /></button>
       </header>
 
       <main className="flex-1 overflow-y-auto pb-32 p-4">
@@ -294,13 +230,7 @@ const App = () => {
 
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={18} />
-              <input 
-                type="text" 
-                placeholder="Filtrar placa ou modelo..." 
-                className="w-full bg-zinc-900 border border-zinc-800 p-4 pl-12 rounded-2xl outline-none focus:border-red-600 text-white" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-              />
+              <input type="text" placeholder="Pesquisar placa ou modelo..." className="w-full bg-zinc-900 border border-zinc-800 p-4 pl-12 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             
             <div className="space-y-4">
@@ -311,27 +241,20 @@ const App = () => {
                 </div>
               ) : (
                 sortedVehicles.map((v) => (
-                  <div key={v.id} className={`bg-zinc-900 border rounded-3xl p-5 transition-all ${v.status === 'ROUBADO' ? 'border-red-900/30 shadow-lg shadow-red-900/5' : 'opacity-40 grayscale border-zinc-800'}`}>
+                  <div key={v.id} className={`bg-zinc-900 border rounded-3xl p-5 transition-all ${v.status === 'ROUBADO' ? 'border-red-900/30 ring-1 ring-red-600/5 shadow-lg' : 'opacity-40 grayscale border-zinc-800'}`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${v.status === 'ROUBADO' ? 'bg-red-600 text-white' : 'bg-zinc-800'}`}>{v.status}</span>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${v.status === 'ROUBADO' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}`}>{v.status}</span>
                         <h4 className="text-2xl font-black mt-2 leading-none uppercase">{v.placa || "S/ P"}</h4>
                         <p className="text-zinc-400 text-sm mt-1">{v.modelo}</p>
                       </div>
-                      <div className="text-right text-[10px] text-zinc-600 font-bold leading-tight">
-                        <Clock size={10} className="inline mr-1" /> {v.data}
-                      </div>
+                      <div className="text-right text-[10px] text-zinc-600 font-bold leading-tight"><Clock size={10} className="inline mr-1" /> {v.data}</div>
                     </div>
                     <div className="mt-4 text-[10px] text-zinc-500 bg-black/40 p-3 rounded-xl flex items-center gap-2 border border-zinc-800/50">
-                      <MapPin size={12} className="text-red-600" /> <span className="truncate">{v.local || "Não informado"}</span>
+                      <MapPin size={12} className="text-red-600 shrink-0" /> <span className="truncate">{v.local || "Não informado"}</span>
                     </div>
                     {v.status === 'ROUBADO' && (
-                      <button 
-                        onClick={() => markAsRecovered(v.id, v.placa)} 
-                        className="w-full mt-4 bg-zinc-800 text-white text-[11px] font-black py-3.5 rounded-xl border border-zinc-700 transition-all active:scale-95 shadow-md uppercase"
-                      >
-                        Marcar Recuperado
-                      </button>
+                      <button onClick={() => markAsRecovered(v.id, v.placa)} className="w-full mt-4 bg-zinc-800 text-white text-[11px] font-black py-3.5 rounded-xl border border-zinc-700 transition-all active:scale-95 shadow-md uppercase">Marcar Recuperado</button>
                     )}
                   </div>
                 ))
@@ -340,98 +263,36 @@ const App = () => {
           </div>
         ) : (
           <div className="space-y-6 animate-in slide-in-from-bottom-6 duration-500 p-2 font-sans">
-            <h3 className="text-3xl font-black italic underline decoration-red-600 underline-offset-8 uppercase">Novo Alerta</h3>
+            <h3 className="text-3xl font-black italic underline decoration-red-600 underline-offset-8 uppercase tracking-tighter">Novo Alerta</h3>
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <input 
-                  type="text" 
-                  placeholder="Placa" 
-                  className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl uppercase outline-none focus:border-red-600 text-white px-4 py-3" 
-                  value={formData.placa} 
-                  onChange={(e) => setFormData({...formData, placa: e.target.value})} 
-                  required 
-                />
-                <select 
-                  className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-zinc-400 outline-none px-4 py-3" 
-                  value={formData.tipo} 
-                  onChange={(e) => setFormData({...formData, tipo: e.target.value})} 
-                  required
-                >
+                <input type="text" placeholder="Placa" className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl uppercase outline-none focus:border-red-600 text-white px-4 py-3" value={formData.placa} onChange={(e) => setFormData({...formData, placa: e.target.value})} required />
+                <select className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-zinc-400 outline-none px-4 py-3" value={formData.tipo} onChange={(e) => setFormData({...formData, tipo: e.target.value})} required>
                   <option value="">Tipo</option>
                   <option value="Carro">Carro</option>
                   <option value="Moto">Moto</option>
                   <option value="Outro">Outro</option>
                 </select>
               </div>
-              <input 
-                type="text" 
-                placeholder="Marca / Modelo" 
-                className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" 
-                value={formData.modelo} 
-                onChange={(e) => setFormData({...formData, modelo: e.target.value})} 
-                required 
-              />
-              <input 
-                type="text" 
-                placeholder="Local" 
-                className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" 
-                value={formData.local} 
-                onChange={(e) => setFormData({...formData, local: e.target.value})} 
-                required 
-              />
-              <textarea 
-                placeholder="Observações..." 
-                className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl h-24 outline-none focus:border-red-600 text-white px-4 py-3" 
-                value={formData.obs} 
-                onChange={(e) => setFormData({...formData, obs: e.target.value})} 
-              />
-              <button 
-                type="submit" 
-                disabled={isSaving} 
-                className="w-full bg-red-600 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-[0.98]"
-              >
-                {isSaving ? <Loader2 className="animate-spin" /> : <Shield size={24} />} LANÇAR NA REDE
+              <input type="text" placeholder="Marca / Modelo" className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" value={formData.modelo} onChange={(e) => setFormData({...formData, modelo: e.target.value})} required />
+              <input type="text" placeholder="Local da Ocorrência" className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl outline-none focus:border-red-600 text-white px-4 py-3" value={formData.local} onChange={(e) => setFormData({...formData, local: e.target.value})} required />
+              <textarea placeholder="Observações..." className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl h-24 resize-none outline-none focus:border-red-600 text-white px-4 py-3" value={formData.obs} onChange={(e) => setFormData({...formData, obs: e.target.value})} />
+              <button type="submit" disabled={isSaving} className="w-full bg-red-600 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-[0.98]">
+                {isSaving ? <Loader2 className="animate-spin" size={24} /> : <Shield size={24} />} LANÇAR NA REDE
               </button>
-              <button 
-                type="button" 
-                onClick={() => setView('list')} 
-                className="w-full text-zinc-600 text-[10px] font-black uppercase py-4"
-              >
-                Cancelar
-              </button>
+              <button type="button" onClick={() => setView('list')} className="w-full text-zinc-600 text-[10px] font-black uppercase py-4">Cancelar</button>
             </form>
           </div>
         )}
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-zinc-950/90 backdrop-blur-xl border-t border-zinc-900 px-10 py-5 flex justify-around items-center rounded-t-[40px] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <button 
-          onClick={() => setView('list')} 
-          className={`flex flex-col items-center gap-1.5 transition-all ${view === 'list' ? 'text-red-600 scale-110' : 'text-zinc-700'}`}
-        >
-          <Search size={22} />
-          <span className="text-[8px] font-black uppercase tracking-widest">Monitor</span>
-        </button>
-        <button 
-          onClick={() => setView('add')} 
-          className={`-mt-14 w-16 h-16 rounded-full flex items-center justify-center border-4 border-black transition-all active:scale-90 ${view === 'add' ? 'bg-white text-black' : 'bg-red-600 text-white shadow-red-600/40'}`}
-        >
-          <PlusCircle size={32} />
-        </button>
-        <button 
-          className="flex flex-col items-center gap-1.5 text-zinc-900 opacity-20 cursor-not-allowed" 
-          disabled
-        >
-          <History size={22} />
-          <span className="text-[8px] font-black uppercase tracking-widest">Histórico</span>
-        </button>
+        <button onClick={() => setView('list')} className={`flex flex-col items-center gap-1.5 transition-all ${view === 'list' ? 'text-red-600 scale-110' : 'text-zinc-700'}`}><Search size={22} /><span className="text-[8px] font-black uppercase">Monitor</span></button>
+        <button onClick={() => setView('add')} className={`-mt-14 w-16 h-16 rounded-full flex items-center justify-center border-4 border-black transition-all active:scale-90 ${view === 'add' ? 'bg-white text-black' : 'bg-red-600 text-white shadow-red-600/40'}`}><PlusCircle size={32} /></button>
+        <button className="flex flex-col items-center gap-1.5 text-zinc-900 opacity-20 cursor-not-allowed" disabled><History size={22} /><span className="text-[8px] font-black uppercase tracking-widest">Histórico</span></button>
       </nav>
       
-      {notification && (
-        <div className={`fixed top-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-[10px] font-black uppercase border z-[60] shadow-2xl animate-in fade-in slide-in-from-top-4 ${notification.type === 'error' ? 'bg-red-950 border-red-600 text-white' : 'bg-zinc-900 border-zinc-800 text-green-500'}`}>
-          {notification.msg}
-        </div>
-      )}
+      {notification && <div className={`fixed top-24 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg text-[10px] font-black uppercase border z-[60] shadow-2xl animate-in fade-in slide-in-from-top-4 ${notification.type === 'error' ? 'bg-red-950 border-red-600 text-white' : 'bg-zinc-900 border-zinc-800 text-green-500'}`}>{notification.msg}</div>}
     </div>
   );
 };

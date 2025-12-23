@@ -4,26 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>CHOQUE - PMPB</title>
+    <!-- Tailwind via CDN para visualização garantida -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      @tailwind base;
-      @tailwind components;
-      @tailwind utilities;
-
-      body {
-        margin: 0;
-        background-color: black;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      /* Custom animations for better tactical feel */
-      .animate-pulse-slow {
-        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
+      body { margin: 0; background-color: black; }
+      #root { min-height: 100vh; }
     </style>
   </head>
-  <body class="bg-black text-white antialiased font-sans">
+  <body class="bg-black text-white antialiased">
     <div id="root"></div>
+    <!-- O ponto antes da barra './' é vital para a Vercel encontrar o código -->
     <script type="module" src="./main.jsx"></script>
   </body>
 </html>
